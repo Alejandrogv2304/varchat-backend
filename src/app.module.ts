@@ -1,15 +1,23 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
+    //Con esta configuración solo estamos permitiendo 15 peticiones por minuto por IP
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 25,
+      },
+    ]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      expandVariables: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -21,7 +29,6 @@ import { UsersModule } from './modules/users/users.module';
         password: configService.get<string>('POSTGRES_PASSWORD', ''),
         database: configService.get<string>('POSTGRES_DB', 'varchat_db'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        // Liquibase administra el esquema; TypeORM no debe intentar sincronizarlo al arranque.
         synchronize:
           configService.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
         logging: configService.get<string>('DB_LOGGING', 'false') === 'true',
@@ -30,8 +37,13 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
     }),
     UsersModule,
+    JwtModule.register({global: true}),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  
+  providers: [
+  { provide: 'APP_GUARD', useClass: ThrottlerGuard },
+  { provide: 'APP_GUARD', useClass: JwtAuthGuard },
+  { provide: 'APP_GUARD', useClass: RolesGuard },
+],
 })
 export class AppModule {}
