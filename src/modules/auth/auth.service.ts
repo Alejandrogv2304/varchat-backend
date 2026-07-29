@@ -174,4 +174,13 @@ export class AuthService {
         })
     }
 
+    //Metodo para cerrar sesion, eliminando el hash del refresh token de DB para que no se puedan generar mas refresh tokens y borrando la cookie.
+     async logout(userId:string, res: Response){
+        await this.usersService.update(userId, { refreshTokenHash: null });
+        res.clearCookie('refreshToken')
+        return {
+            message:'Sesión cerrada correctamente'
+        }
+    }
+
 }

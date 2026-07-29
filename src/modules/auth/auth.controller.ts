@@ -6,6 +6,8 @@ import { RegisterDto } from './dto/register.dto';
 import { Throttle } from '@nestjs/throttler';
 import { LoginDto } from './dto/login.dto';
 import type { Response, Request } from 'express';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from 'src/common/types/authenticated-user';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -42,5 +44,30 @@ export class AuthController {
         @Res({passthrough: true}) res: Response
     ) {
         return this.authService.login(dto, res);
+    }
+
+    //Se le pasa el accesstoken en el header de bearer token
+    @Post('logout')
+    @ApiBearerAuth()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Cerrar sesión e invalidar el token' })
+    async logout(
+        @CurrentUser() user: AuthenticatedUser,
+        @Res({passthrough: true}) res: Response
+    ) {
+        return this.authService.logout(user.id, res);
+    }
+
+    @Get('me')
+    @ApiBearerAuth()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Obtener información del usuario actual' })
+    me(@CurrentUser() user: AuthenticatedUser) {
+        return {
+            id: user.id,
+            name: user.nombre,
+            email: user.correo,
+            username: user.username,
+        }
     }
 }
