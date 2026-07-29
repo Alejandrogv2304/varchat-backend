@@ -47,6 +47,9 @@ importers:
       crypto:
         specifier: ^1.0.1
         version: 1.0.1
+      ms:
+        specifier: ^2.1.3
+        version: 2.1.3
       pg:
         specifier: ^8.22.0
         version: 8.22.0

@@ -1,11 +1,15 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
+import ms from 'ms';
 import { ConfigService } from '@nestjs/config';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import type { Response } from 'express';
+import type { AuthenticatedUser } from 'src/common/types/authenticated-user';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -53,6 +57,40 @@ export class AuthService {
          }
     }
 
+    async login(dto: LoginDto, res: Response){
+        const user = await this.usersService.findByEmailWithPassword(dto.correo);
+
+         if(!user){
+            throw new UnauthorizedException('Credenciales inválidas');
+        }
+
+        const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
+
+        if(!passwordMatch){
+            throw new UnauthorizedException('Credenciales inválidas');
+        }
+
+        if(!user.isVerified){
+            throw new UnauthorizedException('Por favor, verifica tu correo electrónico antes de iniciar sesión');
+        }
+
+        const tokens = await this.generateTokens(user);
+        await this.saveRefreshToken(user.id, tokens.refreshToken);
+        this.setRefreshTokenCookie(res, tokens.refreshToken);
+
+        return {
+            accessToken: tokens.accessToken,
+            user:{
+                id: user.id,
+                email: user.correo,
+                name: user.nombre,
+                username: user.username
+            }
+        }
+
+    }
+
+     
     async verifyEmail(token: string, res: Response) {
         const user = await this.usersService.findByVerificationToken(token);
 
@@ -85,12 +123,55 @@ export class AuthService {
             accessToken: tokens.accessToken,
             user:{
                 id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
+                email: user.correo,
+                name: user.nombre,
+                username: user.username,
             }
         }
 
+    }
+
+     //Este metodo se va a encargar de generar los tokens haciendo uso de la libreria jwtService, que es un servicio de NestJS que nos permite generar y verificar tokens JWT.
+    //Son dos tokens, el de acceso de duración corta y el refresh que dura más tiempo y se almacena en la cookie
+    private async generateTokens(user: AuthenticatedUser) {
+        const payload = {
+            sub: user.id,
+            email: user.correo,
+            username: user.username,
+        };
+        const accessToken = await this.jwtService.signAsync(payload,{
+            secret: this.configService.get('JWT_ACCESS_SECRET'),
+            expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN'),
+        });
+
+        const refreshToken = await this.jwtService.signAsync(payload,{
+            secret: this.configService.get('JWT_REFRESH_SECRET'),
+            expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN'),
+        });
+
+        return { 
+            accessToken, 
+            refreshToken 
+        };
+    }
+
+      //Con este metodo generamos el hash del refresh token y lo guardamos en la base de datos, para luego poder compararlo cuando el usuario haga una solicitud de refresh token.
+    private async saveRefreshToken(userId: string, refreshToken: string) {
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.update(userId, { refreshTokenHash });
+    }
+
+    //Con este metodo establecemos la cookie del refresh token.
+    private setRefreshTokenCookie(res: Response, refreshToken: string) {
+        const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')!;
+        const refreshMaxAge = ms(refreshExpiresIn);
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: 'lax',
+            maxAge: refreshMaxAge,
+        })
     }
 
 }

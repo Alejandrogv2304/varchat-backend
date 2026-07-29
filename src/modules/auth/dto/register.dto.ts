@@ -20,6 +20,7 @@ export class RegisterDto {
    
     @ApiProperty({example:'password1234' , minLength:8})
     @IsString()
+    @IsNotEmpty({message:'La contraseña es obligatoria'})
     @MinLength(8, {message:'La contraseña debe tener al menos 8 caracteres'})
     password!: string;
 
