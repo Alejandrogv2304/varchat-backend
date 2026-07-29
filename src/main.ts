@@ -17,6 +17,9 @@ async function bootstrap() {
   // Middleware para parsear cookies
   app.use(cookieParser());
 
+   //Con esto ponemos un prefijo global a todas las rutas de la API
+  app.setGlobalPrefix('api');
+
   // Habilita validaciones globales
   app.useGlobalPipes(
     new ValidationPipe({
