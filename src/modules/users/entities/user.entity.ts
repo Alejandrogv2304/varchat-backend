@@ -60,6 +60,50 @@ export class Usuario {
   passwordHash!: string;
 
   @Column({
+    name: 'is_verified',
+    type: 'boolean',
+    default: false,
+  })
+  isVerified!: boolean;
+
+  @Column({
+    name: 'verification_token',
+    type: 'text',
+    nullable: true,
+  })
+  verificationToken!: string | null;
+
+  @Column({
+    name: 'verification_token_expires_at',
+    type: 'timestamp',
+    precision: 3,
+    nullable: true,
+  })
+  verificationTokenExpiresAt!: Date | null;
+
+  @Column({
+    name: 'reset_token',
+    type: 'text',
+    nullable: true,
+  })
+  resetToken!: string | null;
+
+  @Column({
+    name: 'reset_token_expires_at',
+    type: 'timestamp',
+    precision: 3,
+    nullable: true,
+  })
+  resetTokenExpiresAt!: Date | null;
+
+  @Column({
+    name: 'refresh_token_hash',
+    type: 'text',
+    nullable: true,
+  })
+  refreshTokenHash!: string | null;
+
+  @Column({
     type: 'varchar',
     length: 280,
     nullable: true,

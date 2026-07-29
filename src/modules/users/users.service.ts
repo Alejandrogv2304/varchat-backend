@@ -19,5 +19,21 @@ export class UsersService {
         });
     }
 
+    async findByEmail(correo: string): Promise<Usuario | null> {
+        return this.usersRepository.findOne({
+            where: { correo }
+        });
+    }
+
+    async findByUsername(username: string): Promise<Usuario | null> {
+        return this.usersRepository.findOne({
+            where: { username }
+        });
+    }
+
+    async create(user: Partial<Usuario>): Promise<Usuario> {
+        const newUser = this.usersRepository.create(user);
+        return this.usersRepository.save(newUser);
+    }
 
 }
