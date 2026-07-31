@@ -39,6 +39,20 @@ export class UsersService {
         });
     }
 
+    async checkIfUsernameExists(username: string):Promise<{username: string; available: boolean; message: string}> {
+        const normalizedUsername = username.trim().toLowerCase();
+        const usernameExists = await this.usersRepository.findOne({
+            where: { username }
+        });
+
+        return {
+            username: normalizedUsername,
+            available: !usernameExists,
+            message: usernameExists ? 'Username no disponible' : 'Username disponible',
+        };
+        }
+    
+
     async create(user: Partial<Usuario>): Promise<Usuario> {
         const newUser = this.usersRepository.create(user);
         return this.usersRepository.save(newUser);
