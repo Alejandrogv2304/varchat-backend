@@ -8,6 +8,8 @@ import { LoginDto } from './dto/login.dto';
 import type { Response, Request } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from 'src/common/types/authenticated-user';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -69,5 +71,24 @@ export class AuthController {
             email: user.correo,
             username: user.username,
         }
+    }
+
+    @Throttle({default:{ttl: 60000, limit: 3}})
+    @Public()
+    @Post('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Solicitar restablecimiento de contraseña' })
+    async forgotPassword(@Body() dto: ForgotPasswordDto) {
+        return this.authService.forgotPassword(dto.email);
+    }
+
+
+    @Throttle({default:{ttl: 60000, limit: 3}})
+    @Public()
+    @Post('reset-password')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Restablecer contraseña' })
+    async resetPassword( @Body() dto: ResetPasswordDto ) {
+        return this.authService.resetPassword(dto.token, dto.password);
     }
 }
